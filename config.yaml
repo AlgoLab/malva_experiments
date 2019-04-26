@@ -1,0 +1,19 @@
+root: /HDD/data/malva_exps
+folds:
+  in : input
+  mid : mid
+  out : output
+files:
+  ref : hs37d5.fa
+  cleanref : hs37d5.clean.fa
+  vcf : 1kgen.ph3.EUR.vcf
+  vcf_vg : 1kgen.ph3.EUR.vargeno.vcf
+  sample : RMNISTHS_30xdownsample
+params:
+  truth : NA12878
+  pop : EUR
+  k : 35
+  K : 47
+  full : FULL
+  half : HALF
+  chroms : 2,4,6,8,10,12,14,16,18,20,22

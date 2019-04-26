@@ -1,0 +1,193 @@
+configfile: "config.yaml"
+
+import os
+pjoin = os.path.join
+WF = os.getcwd()
+
+truth_sample = config["params"]["truth"]
+full_ph = config["params"]["full"]
+half_ph = config["params"]["half"]
+chroms = config["params"]["chroms"]
+chroms_list = chroms.split(',')
+
+root_fold = config["root"]
+
+mid_fold_name = config["folds"]["mid"]
+out_fold_name = config["folds"]["out"]
+
+cleanref_fname = config["files"]["cleanref"]
+
+
+
+rule run_analysis:
+    input:
+        expand(pjoin(root_fold, full_ph, out_fold_name, "happy", "{tool}.results.summary.csv"),
+               tool = ["malva", "bcftools", "gatk", "discosnp"]),
+        expand(pjoin(root_fold, half_ph, out_fold_name, "happy", "{tool}.results.summary.csv"),
+               tool = ["malva", "vargeno", "bcftools", "gatk", "discosnp"]),
+        pjoin(root_fold, full_ph, out_fold_name, "PR_bychrom.csv"),
+        pjoin(root_fold, half_ph, out_fold_name, "PR_bychrom.csv")
+
+##################
+### FULL HAPPY ###
+##################
+rule fullhappy:
+    input:
+        ref = pjoin(root_fold, full_ph, mid_fold_name, cleanref_fname),
+        ref_index = pjoin(root_fold, full_ph, mid_fold_name, cleanref_fname + ".fai"),
+        truth = pjoin(root_fold, full_ph, mid_fold_name, truth_sample + ".vcf.gz"),
+        vcf = pjoin(root_fold, "{placefolder}", out_fold_name, "{tool}", "{tool}.vcf.gz")
+    output:
+        pjoin(root_fold, "{placefolder}", out_fold_name, "happy", "{tool}.results.summary.csv")
+    params:
+        out_prefix = pjoin(root_fold, "{placefolder}", out_fold_name, "happy", "{tool}.results")
+    log:
+        pjoin(root_fold, "{placefolder}", out_fold_name, "happy", "{tool}.happy.outlog")
+    conda:
+        "envs/hap.py.yaml"
+    shell:
+        """
+        export HGREF={input.ref}
+        hap.py -r {input.ref} {input.truth} {input.vcf} -o {params.out_prefix} &> {log}
+        """
+
+######################
+### HAPPY BY CHROM ###
+######################
+rule index_fa:
+    input:
+        pjoin(root_fold, full_ph, mid_fold_name, cleanref_fname[:-3], "{n}.fa")
+    output:
+        pjoin(root_fold, full_ph, mid_fold_name, cleanref_fname[:-3], "{n}.fa.fai")
+    conda:
+        "envs/malva_exps.yaml"
+    shell:
+        """
+        samtools faidx {input}
+        """
+
+rule index_vcf:
+    input:
+        pjoin(root_fold, "{placefolder}", out_fold_name, "{tool}", "{tool}.vcf")
+    output:
+        pjoin(root_fold, "{placefolder}", out_fold_name, "{tool}", "{tool}.vcf.gz")
+    conda:
+        "envs/malva_exps.yaml"
+    shell:
+        """
+        bgzip -c {input} > {output}
+        tabix -p vcf {output}
+        """
+
+rule run_splitters:
+    input:
+        expand(pjoin(root_fold, full_ph, mid_fold_name, cleanref_fname[:-3], "{n}.fa"),
+               n = [str(x) for x in range(1,23)] + ["X"]),
+        expand(pjoin(root_fold, full_ph, mid_fold_name, truth_sample, "{n}.vcf"),
+               n = [str(x) for x in range(1,23)] + ["X"]),
+        expand(pjoin(root_fold, full_ph, out_fold_name, "{tool}", "{tool}", "{n}.vcf"),
+               tool = ["malva", "bcftools", "gatk", "discosnp"],
+               n = [str(x) for x in range(1,23)] + ["X"]),
+        expand(pjoin(root_fold, half_ph, out_fold_name, "{tool}", "{tool}", "{n}.vcf"),
+               tool = ["malva", "vargeno", "bcftools", "gatk", "discosnp"],
+               n = [str(x) for x in range(1,23)][1::2])
+
+rule split_fasta:
+    input:
+        pjoin(root_fold, full_ph, mid_fold_name, cleanref_fname)
+    output:
+        pjoin(root_fold, full_ph, mid_fold_name, cleanref_fname[:-3], "{n}.fa")
+    params:
+        n = "{n}"
+    conda:
+        "envs/malva_exps.yaml"
+    shell:
+        """
+        samtools faidx {input} {params.n} > {output}
+        sed -i 's/>/>chr/g' {output}
+        """
+
+rule split_truth:
+    input:
+        pjoin(root_fold, full_ph, mid_fold_name, truth_sample + ".vcf.gz")
+    output:
+        pjoin(root_fold, full_ph, mid_fold_name, truth_sample, "{n}.vcf")
+    params:
+        n = "{n}"
+    conda:
+        "envs/malva_exps.yaml"
+    shell:
+        """
+        bcftools view {input} {params.n} > {output}
+        """
+
+rule split_outvcf:
+    input:
+        pjoin(root_fold, "{placefolder}", out_fold_name, "{tool}", "{tool}.vcf.gz")
+    output:
+        pjoin(root_fold, "{placefolder}", out_fold_name, "{tool}", "{tool}", "{n}.vcf")
+    params:
+        n = "{n}"
+    conda:
+        "envs/malva_exps.yaml"
+    shell:
+        """
+        bcftools view {input} {params.n} > {output}
+        """
+
+rule run_happy:
+    input:
+        expand(pjoin(root_fold, full_ph, out_fold_name, "happy", "{tool}", "{n}.summary.csv"),
+               tool = ["malva", "bcftools", "gatk", "discosnp"],
+               n = [str(x) for x in range(1,23)] + ["X"]),
+        expand(pjoin(root_fold, half_ph, out_fold_name, "happy", "{tool}", "{n}.summary.csv"),
+               tool = ["malva", "vargeno", "bcftools", "gatk", "discosnp"],
+               n = [str(x) for x in range(1,23)][1::2])
+
+rule happy:
+    input:
+        ref = pjoin(root_fold, full_ph, mid_fold_name, cleanref_fname[:-3], "{n}.fa"),
+        ref_index = pjoin(root_fold, full_ph, mid_fold_name, cleanref_fname[:-3], "{n}.fa.fai"),
+        truth = pjoin(root_fold, full_ph, mid_fold_name, truth_sample, "{n}.vcf"),
+        vcf = pjoin(root_fold, "{placefolder}", out_fold_name, "{tool}", "{tool}", "{n}.vcf")
+    output:
+        pjoin(root_fold, "{placefolder}", out_fold_name, "happy", "{tool}", "{n}.summary.csv")
+    params:
+        out_prefix = pjoin(root_fold, "{placefolder}", out_fold_name, "happy", "{tool}", "{n}")
+    log:
+        pjoin(root_fold, "{placefolder}", out_fold_name, "happy", "{tool}", "{n}.outlog")
+    conda:
+        "envs/hap.py.yaml"
+    shell:
+        """
+        export HGREF={input.ref}
+        hap.py -r {input.ref} {input.truth} {input.vcf} -o {params.out_prefix} &> {log}
+        """
+
+rule prepare_fulltable:
+    input:
+        expand(pjoin(root_fold, full_ph, out_fold_name, "happy", "{tool}", "{n}.summary.csv"),
+               tool = ["malva", "bcftools", "gatk", "discosnp"],
+               n = [str(x) for x in range(1,23)] + ["X"])
+    output:
+        pjoin(root_fold, full_ph, out_fold_name, "PR_bychrom.csv")
+    params:
+        pjoin(root_fold, full_ph, out_fold_name, "happy")
+    shell:
+        """
+        bash {WF}/analysis/prepare_table.sh {params} > {output}
+        """
+
+rule prepare_halftable:
+    input:
+        expand(pjoin(root_fold, half_ph, out_fold_name, "happy", "{tool}", "{n}.summary.csv"),
+               tool = ["malva", "vargeno", "bcftools", "gatk", "discosnp"],
+               n = [str(x) for x in range(1,23)][1::2])
+    output:
+        pjoin(root_fold, half_ph, out_fold_name, "PR_bychrom.csv")
+    params:
+        pjoin(root_fold, half_ph, out_fold_name, "happy")
+    shell:
+        """
+        bash {WF}/analysis/prepare_PRbychrom_table.sh {params} > {output}
+        """
