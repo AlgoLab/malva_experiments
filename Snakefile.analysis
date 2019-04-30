@@ -151,7 +151,8 @@ rule happy:
         truth = pjoin(root_fold, full_ph, mid_fold_name, truth_sample, "{n}.vcf"),
         vcf = pjoin(root_fold, "{placefolder}", out_fold_name, "{tool}", "{tool}", "{n}.vcf")
     output:
-        pjoin(root_fold, "{placefolder}", out_fold_name, "happy", "{tool}", "{n}.summary.csv")
+        pjoin(root_fold, "{placefolder}", out_fold_name, "happy", "{tool}", "{n}.summary.csv"),
+        pjoin(root_fold, "{placefolder}", out_fold_name, "happy", "{tool}", "{n}.vcf.gz")
     params:
         out_prefix = pjoin(root_fold, "{placefolder}", out_fold_name, "happy", "{tool}", "{n}")
     log:
@@ -190,4 +191,37 @@ rule prepare_halftable:
     shell:
         """
         bash {WF}/analysis/prepare_PRbychrom_table.sh {params} > {output}
+        """
+
+#######################
+### INDELS ANALYSIS ###
+#######################
+
+rule run_indels_analysis:
+    input:
+        expand(pjoin(root_fold, full_ph, out_fold_name, "indels", "{tool}.csv"),
+               tool = ["malva", "bcftools", "gatk", "discosnp"]),
+        # expand(pjoin(root_fold, half_ph, out_fold_name, "indels", "{tool}.csv"),
+        #        tool = ["malva", "vargeno", "bcftools", "gatk", "discosnp"])
+
+rule combine_indels:
+    input:
+        expand(pjoin(root_fold, "{{placefolder}}", out_fold_name, "indels", "{{tool}}", "{n}.csv"),
+               n = [str(x) for x in range(1,23)] + ["X"])
+    output:
+        pjoin(root_fold, "{placefolder}", out_fold_name, "indels", "{tool}.csv")
+    shell:
+        """
+        cat {input} > {output}
+        """
+
+rule check_indels:
+    input:
+        happy_vcf = pjoin(root_fold, "{placefolder}", out_fold_name, "happy", "{tool}", "{n}.vcf.gz"),
+        truth_vcf = pjoin(root_fold, full_ph, mid_fold_name, truth_sample, "{n}.vcf")
+    output:
+        pjoin(root_fold, "{placefolder}", out_fold_name, "indels", "{tool}", "{n}.csv")
+    shell:
+        """
+        python3 {WF}/analysis/check_indels.py {input.happy_vcf} {input.truth_vcf} > {output}
         """
