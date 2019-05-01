@@ -201,6 +201,9 @@ rule run_indels_analysis:
     input:
         expand(pjoin(root_fold, full_ph, out_fold_name, "indels", "{tool}.csv"),
                tool = ["malva", "bcftools", "gatk", "discosnp"]),
+        expand(pjoin(root_fold, full_ph, out_fold_name, "indels", "{tool}", "{n}.PR"),
+               tool = ["malva", "bcftools", "gatk", "discosnp"],
+               n = [str(x) for x in range(1,23)] + ["X"])
         # expand(pjoin(root_fold, half_ph, out_fold_name, "indels", "{tool}.csv"),
         #        tool = ["malva", "vargeno", "bcftools", "gatk", "discosnp"])
 
@@ -221,7 +224,24 @@ rule check_indels:
         truth_vcf = pjoin(root_fold, full_ph, mid_fold_name, truth_sample, "{n}.vcf")
     output:
         pjoin(root_fold, "{placefolder}", out_fold_name, "indels", "{tool}", "{n}.csv")
+    conda:
+        "envs/malva_exps.yaml"
     shell:
         """
         python3 {WF}/analysis/check_indels.py {input.happy_vcf} {input.truth_vcf} > {output}
+        """
+
+rule compute_PR:
+    input:
+        pjoin(root_fold, "{placefolder}", out_fold_name, "indels", "{tool}", "{n}.csv")
+    output:
+        pjoin(root_fold, "{placefolder}", out_fold_name, "indels", "{tool}", "{n}.PR")
+    shell:
+        """
+        tp=$(cut -f 4 -d',' {input} | tail -n +2 | paste -sd+ | bc)
+        fp=$(cut -f 5 -d',' {input} | tail -n +2 | paste -sd+ | bc)
+        total=$(cut -f 6 -d',' {input} | tail -n +2 | paste -sd+ | bc)
+        P=$(bc -l <<< "scale=2; $tp/($tp+$fp)")
+        R=$(bc -l <<< "scale=2; $tp/$total")
+        echo "tp,fp,total,P,R\n$tp,$fp,$total,$P,$R" > {output}
         """
