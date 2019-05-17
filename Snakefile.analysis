@@ -22,11 +22,11 @@ cleanref_fname = config["files"]["cleanref"]
 rule run_analysis:
     input:
         expand(pjoin(root_fold, full_ph, out_fold_name, "happy", "{tool}.results.summary.csv"),
-               tool = ["malva", "bcftools", "gatk", "discosnp"]),
-        expand(pjoin(root_fold, half_ph, out_fold_name, "happy", "{tool}.results.summary.csv"),
-               tool = ["malva", "vargeno", "bcftools", "gatk", "discosnp"]),
+               tool = ["malva"]),#, "bcftools", "gatk", "discosnp"]),
+        #expand(pjoin(root_fold, half_ph, out_fold_name, "happy", "{tool}.results.summary.csv"),
+        #       tool = ["malva", "vargeno", "bcftools", "gatk", "discosnp"]),
         pjoin(root_fold, full_ph, out_fold_name, "PR_bychrom.csv"),
-        pjoin(root_fold, half_ph, out_fold_name, "PR_bychrom.csv")
+        #pjoin(root_fold, half_ph, out_fold_name, "PR_bychrom.csv")
 
 ##################
 ### FULL HAPPY ###
@@ -48,7 +48,7 @@ rule fullhappy:
     shell:
         """
         export HGREF={input.ref}
-        hap.py -r {input.ref} {input.truth} {input.vcf} -o {params.out_prefix} &> {log}
+        /home/prj_vcfgeno/hap.py-install/bin/hap.py --threads 4 -r {input.ref} {input.truth} {input.vcf} -o {params.out_prefix} &> {log}
         """
 
 ######################
@@ -138,7 +138,7 @@ rule split_outvcf:
 rule run_happy:
     input:
         expand(pjoin(root_fold, full_ph, out_fold_name, "happy", "{tool}", "{n}.summary.csv"),
-               tool = ["malva", "bcftools", "gatk", "discosnp"],
+               tool = ["malva", "bcftools", "gatk", "discosnp", "malva_notruth"],
                n = [str(x) for x in range(1,23)] + ["X"]),
         expand(pjoin(root_fold, half_ph, out_fold_name, "happy", "{tool}", "{n}.summary.csv"),
                tool = ["malva", "vargeno", "bcftools", "gatk", "discosnp"],
@@ -162,7 +162,7 @@ rule happy:
     shell:
         """
         export HGREF={input.ref}
-        hap.py -r {input.ref} {input.truth} {input.vcf} -o {params.out_prefix} &> {log}
+        /home/prj_vcfgeno/hap.py-install/bin/hap.py -r {input.ref} {input.truth} {input.vcf} -o {params.out_prefix} &> {log}
         """
 
 rule prepare_fulltable:
@@ -176,7 +176,7 @@ rule prepare_fulltable:
         pjoin(root_fold, full_ph, out_fold_name, "happy")
     shell:
         """
-        bash {WF}/analysis/prepare_table.sh {params} > {output}
+        bash {WF}/analysis/prepare_PRbychrom_table.sh {params} > {output}
         """
 
 rule prepare_halftable:

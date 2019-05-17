@@ -21,7 +21,7 @@ def extract_truth(truth_path):
         if is_snp(record):
             continue
         ref_idx = record.chrom # Only if input is "chromosome-specific"
-        vidx = (record.chrom, record.pos, record.ref, "-".join(record.alts))
+        vidx = ("chr" + record.chrom, record.pos, record.ref, "-".join(record.alts))
         is_good = True
         for alt in record.alts:
             if alt[0] == '<':
@@ -76,6 +76,7 @@ def main():
         # See https://github.com/ga4gh/benchmarking-tools/blob/master/doc/ref-impl/intermediate.md#required-vcf-annotations
 
         l_indel = len(record.alts[0]) - len(record.ref)
+
         if vidx in truth_gts:
             tgt = truth_gts[vidx]
             if tgt == "0/0":

@@ -24,6 +24,7 @@ ref_fname = config["files"]["ref"]
 cleanref_fname = config["files"]["cleanref"]
 vcf_fname = config["files"]["vcf"]
 vcf_vg_fname = config["files"]["vcf_vg"]
+vcf_malva_fname = "malva.notruth.vcf"
 sample_name = config["files"]["sample"]
 sample_bam_fname = sample_name + ".bam"
 sample_fname = sample_name + ".fq"
@@ -43,10 +44,10 @@ gatk_indels_res = [pjoin(gatkres_fold, "Mills_and_1000G_gold_standard.indels.hg1
 rule run_all:
     input:
         pjoin(root_fold, out_fold_name, "malva", "malva.vcf"),
-        pjoin(root_fold, out_fold_name, "vargeno", "vargeno.vcf"),
-        pjoin(root_fold, out_fold_name, "bcftools", "bcftools.vcf"),
-        pjoin(root_fold, out_fold_name, "gatk", "gatk.vcf"),
-        pjoin(root_fold, out_fold_name, "discosnp", "discosnp.vcf"),
+        #pjoin(root_fold, out_fold_name, "vargeno", "vargeno.vcf"),
+        #pjoin(root_fold, out_fold_name, "bcftools", "bcftools.vcf"),
+        #pjoin(root_fold, out_fold_name, "gatk", "gatk.vcf"),
+        #pjoin(root_fold, out_fold_name, "discosnp", "discosnp.vcf"),
 
 ##################
 ### HALVE DATA ###
@@ -57,6 +58,7 @@ rule prepare_halfinput:
         pjoin(root_fold, mid_fold_name, cleanref_fname),
         pjoin(root_fold, mid_fold_name, cleanref_fname + ".fai"),
         pjoin(root_fold, mid_fold_name, cleanref_fname[:-3] + ".dict"),
+        pjoin(root_fold, mid_fold_name, vcf_malva_fname),
         pjoin(root_fold, mid_fold_name, vcf_vg_fname),
         pjoin(root_fold, mid_fold_name, truth_sample + ".vcf"),
         pjoin(root_fold, mid_fold_name, sample_fname)
@@ -82,11 +84,11 @@ rule halve_reference:
 rule halve_vcfs:
     input:
         vcf = pjoin(fullroot_fold, in_fold_name, vcf_fname + ".gz"),
-        vcf_vg = pjoin(fullroot_fold, mid_fold_name, vcf_vg_fname + ".gz"),
+        #vcf_vg = pjoin(fullroot_fold, mid_fold_name, vcf_vg_fname + ".gz"),
         vcf_truth = pjoin(fullroot_fold, mid_fold_name, truth_sample + ".vcf.gz")
     output:
         hvcf = pjoin(root_fold, in_fold_name, vcf_fname),
-        hvcf_vg = pjoin(root_fold, mid_fold_name, vcf_vg_fname),
+        #hvcf_vg = pjoin(root_fold, mid_fold_name, vcf_vg_fname),
         hvcf_truth = pjoin(root_fold, mid_fold_name, truth_sample + ".vcf")
     params:
         chroms
@@ -95,9 +97,9 @@ rule halve_vcfs:
     shell:
         """
         bcftools view -r {params} {input.vcf} > {output.hvcf}
-        bcftools view -r {params} {input.vcf_vg} > {output.hvcf_vg}
         bcftools view -r {params} {input.vcf_truth} > {output.hvcf_truth}
         """
+        # bcftools view -r {params} {input.vcf_vg} > {output.hvcf_vg}
 
 rule halve_sample:
     input:
@@ -116,11 +118,25 @@ rule halve_sample:
         rm {params} {params}.bai
         """
 
+rule prepare_vcf_for_malva:
+    input:
+        pjoin(fullroot_fold, mid_fold_name, vcf_malva_fname + ".gz"),
+    output:
+        pjoin(root_fold, mid_fold_name, vcf_malva_fname)
+    params:
+        chroms
+    conda:
+        "envs/malva_exps.yaml"
+    shell:
+        """
+        bcftools view -r {params} {input} > {output}
+        """
+
 ### MALVA ###
 rule malva_geno:
     input:
         ref = pjoin(root_fold, mid_fold_name, cleanref_fname),
-        vcf = pjoin(root_fold, in_fold_name, vcf_fname),
+        vcf = pjoin(root_fold, mid_fold_name, vcf_malva_fname),
         kmc = pjoin(root_fold, out_fold_name, "malva", "KMC.kmc_suf")
     output:
         vcf = pjoin(root_fold, out_fold_name, "malva", "malva.vcf")

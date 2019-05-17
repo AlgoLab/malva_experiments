@@ -1,4 +1,4 @@
-root: /HDD/data/malva_exps
+root: /data/malva_recomb
 folds:
   in : input
   mid : mid
@@ -12,8 +12,8 @@ files:
 params:
   truth : NA12878
   pop : EUR
-  k : 35
-  K : 47
+  k : 47
+  K : 53
   full : FULL
   half : HALF
   chroms : 2,4,6,8,10,12,14,16,18,20,22
