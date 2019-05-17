@@ -1,0 +1,5 @@
+X,malva,vargeno,discosnp,bcftools,gatk
+Alignment,0,0,0,1728,1728
+k-mer counting,53,0,0,0,0
+Genotyping,395,0,859,1535,2748
+RAM,37,0,9,9,33

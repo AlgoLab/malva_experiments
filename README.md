@@ -25,10 +25,11 @@ bash install.sh
 
 
 ### Experiments
+
+Change the `root` folder in the `config.yaml` file with the desired
+folder and run:
 ```
-snakemake [-n] --use-conda -s Snakefile.full
-snakemake [-n] --use-conda -s Snakefile.half
-snakemake [-n] --use-conda -s Snakefile.analysis
+snakemake [-n]
 ```
 
 If you have any problem running the experiments, please contact Luca
