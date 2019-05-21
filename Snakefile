@@ -50,6 +50,12 @@ rule run:
         pjoin(root_fold, "plots", "PR_plot.HALF.png"),
         pjoin(root_fold, "plots", "indels_plot.png"),
         pjoin(root_fold, "plots", "resources_plot.png"),
+        # Heatmaps and tables
+        pjoin(root_fold, "plots", "malva.heatmap.png"),
+        pjoin(root_fold, "plots", "malva.table.png"),
+        pjoin(root_fold, "plots", "vargeno.heatmap.png"),
+        pjoin(root_fold, "plots", "vargeno.table.png")
+
 
 # rule run_all:
 #     input:
@@ -864,6 +870,21 @@ rule happy:
         hap.py -r {input.ref} {input.truth} {input.vcf} -o {params.out_prefix} &> {log}
         """
 
+#####################
+### SNPs ANALYSIS ###
+#####################
+rule compute_confmatrix:
+    input:
+        truth = pjoin(root_fold, "HALF", mid_fold_name, truth_sample + ".vcf"),
+        vcf = pjoin(root_fold, "HALF", out_fold_name, "{tool}", "{tool}.vcf")
+    output:
+        pjoin(root_fold, "HALF", out_fold_name, "snps", "{tool}.confmatrix.csv")
+    conda:
+        "envs/malva_exps.yaml"
+    shell:
+        """
+        python3 {WF}/analysis/print_confmatrix.py {input.truth} {input.vcf} > {output}
+        """
 
 #######################
 ### INDELS ANALYSIS ###
@@ -948,4 +969,39 @@ rule plot_resources:
     shell:
         """
         python3 {WF}/nonsnake_scripts/resources_plot/plot_resources.py {input} {output}
+        """
+
+# rule plot_heatmaps:
+#     input:
+#         malva_cf = pjoin(root_fold, "HALF", out_fold_name, "snps", "vargeno.confmatrix.csv"),
+#         vargeno_cf = pjoin(root_fold, "HALF", out_fold_name, "snps", "malva.confmatrix.csv")
+#     output:
+#         pjoin(root_fold, "plots", "malva.heatmap.png"),
+#         pjoin(root_fold, "plots", "malva.table.png"),
+#         pjoin(root_fold, "plots", "vargeno.heatmap.png"),
+#         pjoin(root_fold, "plots", "vargeno.table.png")
+#     params:
+#         malva = pjoin(root_fold, "plots", "malva"),
+#         vargeno = pjoin(root_fold, "plots", "vargeno")
+#     conda:
+#         "envs/malva_exps.yaml"
+#     shell:
+#         """
+#         python3 {WF}/analysis/plots/plot_heatmap.py {input.malva_cf} {params.malva}
+#         python3 {WF}/analysis/plots/plot_heatmap.py {input.vargeno_cf} {params.vargeno}
+#         """
+
+rule plot_heatmaps:
+    input:
+        pjoin(root_fold, "HALF", out_fold_name, "snps", "{tool}.confmatrix.csv")
+    output:
+        pjoin(root_fold, "plots", "{tool}.heatmap.png"),
+        pjoin(root_fold, "plots", "{tool}.table.png")
+    params:
+        pjoin(root_fold, "plots", "{tool}"),
+    conda:
+        "envs/malva_exps.yaml"
+    shell:
+        """
+        python3 {WF}/analysis/plots/plot_heatmap.py {input} {params}
         """
