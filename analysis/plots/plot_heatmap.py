@@ -6,14 +6,14 @@ import numpy as np
 import pandas as pd
 import seaborn as sns; sns.set()
 
-# from matplotlib import rc
-# rc('text', usetex=True)
+from matplotlib import rc
+#rc('text', usetex=True)
 
-# font = {'family' : 'normal',
-#         'size'   : 15}
-# matplotlib.rc('font', **font)
+font = {'family' : 'normal',
+        'size'   : 5}
+matplotlib.rc('font', **font)
 
-sns.set(font_scale=1.3)
+sns.set(font_scale=1.1)
 
 category_labels = ['HomoRef', 'HetRef', 'HomoAlt', 'HetAlt']
 
@@ -49,14 +49,17 @@ def draw_table(table, labels, out_prefix):
                      cmap="Greys",
                      square = True,
                      xticklabels=labels + ["Uncalled"],
-                     yticklabels=labels)
+                     yticklabels=labels,
+                     annot_kws={"size": 11})
     ax.invert_yaxis()
     #plt.title(r"\textbf{MALVA - SNPs Analysis on Half-DS}")
-    plt.xlabel(r"\textbf{Given GT}")
-    plt.ylabel(r"\textbf{Real GT}")
+    plt.xlabel("Given GT")
+    plt.ylabel("Real GT")
+    #plt.xlabel(r"\textbf{Given GT}")
+    #plt.ylabel(r"\textbf{Real GT}")
     plt.yticks(np.arange(len(labels))+0.5,labels, rotation=90, va="center")
     # plt.show()
-    plt.savefig(out_prefix + ".table.png")
+    plt.savefig(out_prefix + ".table.pdf")
 
 def draw_heatmap(table, labels, out_prefix):
     ax = sns.heatmap(table,
@@ -68,14 +71,17 @@ def draw_heatmap(table, labels, out_prefix):
                      cmap="Greys",
                      square = True,
                      xticklabels=labels + ["Uncalled"],
-                     yticklabels=labels)
+                     yticklabels=labels,
+                     annot_kws={"size": 13})
     ax.invert_yaxis()
     #plt.title(r"\textbf{MALVA - SNPs Analysis on Half-DS}")
-    plt.xlabel(r"\textbf{Given GT}")
-    plt.ylabel(r"\textbf{Real GT}")
+    plt.xlabel("Given GT")
+    plt.ylabel("Real GT")
+    #lt.xlabel(r"\textbf{Given GT}")
+    #lt.ylabel(r"\textbf{Real GT}")
     plt.yticks(np.arange(len(labels))+0.5,labels, rotation=90, va="center")
     #plt.show()
-    plt.savefig(out_prefix + ".heatmap.png")
+    plt.savefig(out_prefix + ".heatmap.pdf")
 
 def get_gt_category(gt):
     # category_labels = ['HomoRef', 'HetRef', 'HomoAlt', 'HetAlt']
@@ -126,6 +132,7 @@ def main():
     table, labels = build_cumulate_table(table, labels)
     draw_table(table, labels, out_prefix)
 
+    plt.clf()
     table = norm_table_row(table)
     draw_heatmap(table, labels, out_prefix)
 

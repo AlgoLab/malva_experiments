@@ -28,7 +28,7 @@ def main():
         Pindel[tool] = Pindel[tool] + [pindel] if tool in Pindel else [pindel]
 
     tools = ["malva", "vargeno", "discosnp", "bcftools", "gatk"] #sorted(Pindel.keys())
-    labels = ["MALVA", "VarGeno", "DiscoSnp", "BCFtools", "GATK"]
+    labels = ["MALVA", "VarGeno", "discoSnp++", "BCFtools", "GATK"]
 
     vg = "vargeno"
     if vg not in Rsnp:
@@ -89,24 +89,26 @@ def main():
 
     ax2.set_xlim([0,base_positions_2[-1] + 1.5])
     ax2.set_xticks([x+0.25 for x in base_positions_1 + base_positions_2])
+    for tick in ax2.get_xticklabels():
+        tick.set_rotation(45)
     ax2.set_xticklabels(labels + labels)
 
-    
+    ax1.grid(color='gray', alpha=0.75, linestyle='dashed', axis='y')
+    ax2.grid(color='gray', alpha=0.75, linestyle='dashed', axis='x')
+    ax1.set_axisbelow(True)
+    ax2.set_axisbelow(True)
 
+    ax3 = ax1.twinx()
+    ax3.axes.get_yaxis().set_visible(False)
     patch1 = mpatches.Patch(facecolor=psnp_color, edgecolor=edge_color, linewidth=edge_size, label='SNP (precision)')
     patch2 = mpatches.Patch(facecolor=rsnp_color, edgecolor=edge_color, linewidth=edge_size, label='SNP (recall)')
     patch3 = mpatches.Patch(facecolor=pindel_color, edgecolor=edge_color, linewidth=edge_size, label='Indel (precision)')
     patch4 = mpatches.Patch(facecolor=rindel_color, edgecolor=edge_color, linewidth=edge_size, label='Indel (recall)')
-    ax1.legend(handles=[patch1, patch2], loc=3)
+    ax3.legend(handles=[patch1, patch2], loc=3)
     ax2.legend(handles=[patch3, patch4], loc=4)
 
-    ax1.grid(color='gray', alpha=0.75, linestyle='dashed', axis='y')
-    ax2.grid(color='gray', alpha=0.75, linestyle='dashed', axis='x')
 
-    ax1.set_axisbelow(True)
-    ax2.set_axisbelow(True)
-
-    plt.subplots_adjust(top=0.95, bottom=0.03, right=0.99, left=0.05)
+    plt.subplots_adjust(top=0.87, bottom=0.03, right=0.99, left=0.05)
     DPI = fig.get_dpi()
     fig.set_size_inches(1280.0/float(DPI),1024.0/float(DPI))
     fig.savefig(out_png, dpi=DPI)
