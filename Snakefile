@@ -26,7 +26,6 @@ ref_fname = fnames["ref"]
 cleanref_fname = fnames["cleanref"]
 vcf_fname = fnames["vcf"]
 vcf_vg_fname = fnames["vcf_vg"]
-vcf_malva_fname = fnames["malva_vg"]
 sample_name = fnames["sample"]
 sample_bam_fname = sample_name + ".bam"
 sample_fname = sample_name + ".fq"
@@ -46,36 +45,21 @@ gatk_indels_res = [pjoin(gatkres_fold, "FULL", "Mills_and_1000G_gold_standard.in
 
 rule run:
     input:
-        pjoin(root_fold, "plots", "PR_plot.FULL.png"),
-        pjoin(root_fold, "plots", "PR_plot.HALF.png"),
-        pjoin(root_fold, "plots", "indels_plot.png"),
-        pjoin(root_fold, "plots", "resources_plot.png"),
+        # Happy
+        expand(pjoin(root_fold, "FULL", out_fold_name, "happy", "{tool}.results.summary.csv"),
+               tool = ["malva", "discosnp", "bcftools", "gatk"]),
+        expand(pjoin(root_fold, "HALF", out_fold_name, "happy", "{tool}.results.summary.csv"),
+               tool = ["malva", "vargeno", "discosnp", "bcftools", "gatk"]),
+        # Bar charts, histograms, and scatterplots
+        pjoin(root_fold, "plots", "PR_plot.FULL.pdf"),
+        pjoin(root_fold, "plots", "PR_plot.HALF.pdf"),
+        pjoin(root_fold, "plots", "indels_plot.pdf"),
+        pjoin(root_fold, "plots", "resources_plot.pdf"),
         # Heatmaps and tables
-        pjoin(root_fold, "plots", "malva.heatmap.png"),
-        pjoin(root_fold, "plots", "malva.table.png"),
-        pjoin(root_fold, "plots", "vargeno.heatmap.png"),
-        pjoin(root_fold, "plots", "vargeno.table.png")
-
-
-# rule run_all:
-#     input:
-#         expand(pjoin(root_fold, "FULL", out_fold_name, "{tool}", "{tool}.vcf"),
-#                tool = ["malva", "discosnp", "bcftools", "gatk"]),
-#         expand(pjoin(root_fold, "HALF", out_fold_name, "{tool}", "{tool}.vcf"),
-#                tool = ["malva", "vargeno", "discosnp", "bcftools", "gatk"]),
-#         expand(pjoin(root_fold, "FULL", out_fold_name, "happy", "{tool}.results.summary.csv"),
-#                tool = ["malva", "discosnp", "bcftools", "gatk"]),
-#         expand(pjoin(root_fold, "HALF", out_fold_name, "happy", "{tool}.results.summary.csv"),
-#                tool = ["malva", "vargeno", "discosnp", "bcftools", "gatk"]),
-#         pjoin(root_fold, "FULL", out_fold_name, "PR_bychrom.csv"),
-#         pjoin(root_fold, "HALF", out_fold_name, "PR_bychrom.csv"),
-#         expand(pjoin(root_fold, "FULL", out_fold_name, "indels", "{tool}.indels.csv"),
-#                tool = ["malva", "bcftools", "gatk", "discosnp"]),
-#         expand(pjoin(root_fold, "FULL", out_fold_name, "indels", "{tool}", "{n}.PR"),
-#                tool = ["malva", "bcftools", "gatk", "discosnp"],
-#                n = [str(x) for x in range(1,23)] + ["X"])
-#         expand(pjoin(root_fold, half_ph, out_fold_name, "indels", "{tool}.csv"),
-#                tool = ["malva", "vargeno", "bcftools", "gatk", "discosnp"])
+        pjoin(root_fold, "plots", "malva.heatmap.pdf"),
+        pjoin(root_fold, "plots", "malva.table.pdf"),
+        pjoin(root_fold, "plots", "vargeno.heatmap.pdf"),
+        pjoin(root_fold, "plots", "vargeno.table.pdf")
 
 ##################
 ### FETCH DATA ###
@@ -122,13 +106,10 @@ rule fetch_vcf:
         vcf = pjoin(root_fold, "FULL", in_fold_name, vcf_fname),
         zvcf = pjoin(root_fold, "FULL", in_fold_name, vcf_fname + ".gz")
     params:
-        fold = pjoin(root_fold, "FULL", in_fold_name),
-        population = pop
+        fold = pjoin(root_fold, "FULL", in_fold_name)
     shell:
         """
-        bash {WF}/scripts/get_eurvcf.sh {params.fold} {params.population}
-        bgzip -c {output.vcf} > {output.zvcf}
-        tabix -p vcf {output.zvcf}
+        bash {WF}/scripts/get_vcf.sh {params.fold}
         """
 
 rule fetch_bam:
@@ -182,23 +163,6 @@ rule clean_ref_from_IUPAC:
         python3 {WF}/scripts/clean_fasta.py {input} > {output.cref} 2> {log}
         gatk CreateSequenceDictionary -R {input} -O {output.cref_dict}
         samtools faidx {output.cref}
-        """
-
-rule prepare_vcf_for_malva:
-    input:
-        vcf = pjoin(root_fold, "FULL", in_fold_name, vcf_fname)
-    output:
-        vcf = pjoin(root_fold, "FULL", mid_fold_name, vcf_malva_fname),
-        zvcf = pjoin(root_fold, "FULL", mid_fold_name, vcf_malva_fname + ".gz")
-    params:
-        indiv = truth_sample
-    conda:
-        "envs/malva_exps.yaml"
-    shell:
-        """
-        gatk SelectVariants --variant {input.vcf} --output {output.vcf} --exclude-sample-name {params.indiv}
-        bgzip -c {output.vcf} > {output.zvcf}
-        tabix -p vcf {output.zvcf}
         """
 
 rule prepare_vcf_for_vg:
@@ -271,12 +235,10 @@ rule halve_reference:
 rule halve_vcfs:
     input:
         zvcf = pjoin(root_fold, "FULL", in_fold_name, vcf_fname + ".gz"),
-        zvcf_malva = pjoin(root_fold, "FULL", mid_fold_name, vcf_malva_fname + ".gz"),
         zvcf_vg = pjoin(root_fold, "FULL", mid_fold_name, vcf_vg_fname + ".gz"),
         zvcf_truth = pjoin(root_fold, "FULL", mid_fold_name, truth_sample + ".vcf.gz")
     output:
         hvcf = pjoin(root_fold, "HALF", in_fold_name, vcf_fname),
-        hvcf_malva = pjoin(root_fold, "HALF", mid_fold_name, vcf_malva_fname),
         hvcf_vg = pjoin(root_fold, "HALF", mid_fold_name, vcf_vg_fname),
         hvcf_truth = pjoin(root_fold, "HALF", mid_fold_name, truth_sample + ".vcf")
     params:
@@ -285,10 +247,9 @@ rule halve_vcfs:
         "envs/malva_exps.yaml"
     shell:
         """
-        bcftools view -r {params} {input.zvcf} > {output.hvcf}
-        bcftools view -r {params} {input.zvcf_malva} > {output.hvcf_malva}
-        bcftools view -r {params} {input.zvcf_vg} > {output.hvcf_vg}
-        bcftools view -r {params} {input.zvcf_truth} > {output.hvcf_truth}
+        bcftools view -r {params} {input.zvcf} -o {output.hvcf}
+        bcftools view -r {params} {input.zvcf_vg} -o {output.hvcf_vg}
+        bcftools view -r {params} {input.zvcf_truth} -o {output.hvcf_truth}
         """
 
 rule halve_sample:
@@ -308,7 +269,6 @@ rule halve_sample:
         rm {params} {params}.bai
         """
 
-
 ### MALVA ###
 rule kmc:
     input:
@@ -326,14 +286,23 @@ rule kmc:
     shell:
         """
         mkdir -p {params.tmp_fold}
-        /usr/bin/time -v -o {log.time} kmc -m3 -t4 -k{K} -fm {input} {params.kmc_prefix} {params.tmp_fold} &> {log.out}
+        /usr/bin/time -v -o {log.time} kmc -t4 -k{K} -fm {input} {params.kmc_prefix} {params.tmp_fold} &> {log.out}
         rm -r {params.tmp_fold}
+        """
+
+rule grep_samples:
+    output:
+        pjoin(root_fold, "{run}", in_fold_name, vcf_fname + ".EUR.samples")
+    shell:
+        """
+        wget -q ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/release/20130502/integrated_call_samples_v3.20130502.ALL.panel -O - | grep -P "\tEUR\t" | grep -v "NA12878" | cut -f 1 > {output}
         """
 
 rule malva_geno:
     input:
         ref = pjoin(root_fold, "{run}", mid_fold_name, cleanref_fname),
-        vcf = pjoin(root_fold, "{run}", mid_fold_name, vcf_malva_fname),
+        vcf = pjoin(root_fold, "{run}", in_fold_name, vcf_fname),
+        samples = pjoin(root_fold, "{run}", in_fold_name, vcf_fname + ".EUR.samples"),
         kmc = pjoin(root_fold, "{run}", out_fold_name, "malva", "KMC.kmc_suf")
     output:
         vcf = pjoin(root_fold, "{run}", out_fold_name, "malva", "malva.vcf")
@@ -346,7 +315,7 @@ rule malva_geno:
         "envs/malva_exps.yaml"
     shell:
         """
-        /usr/bin/time -v -o {log.time} malva-geno -e 0.001 -k {k} -r {K} -p EUR -c 200 -b 8 {input.ref} {input.vcf} {params.kmc_prefix} > {output.vcf} 2> {log.out}
+        /usr/bin/time -v -o {log.time} malva-geno -e 0.001 -k {k} -r {K} -s {input.samples} -f EUR_AF -c 200 -b 8 {input.ref} {input.vcf} {params.kmc_prefix} > {output.vcf} 2> {log.out}
         """
 
 ### VARGENO ###
@@ -726,7 +695,6 @@ rule gatk_indel_vqsr:
                                        -O {output.vcf} &> {log.out}
         """
 
-
 ##################
 ### FULL HAPPY ###
 ##################
@@ -936,14 +904,14 @@ rule plot_PR:
         full_csv = pjoin(root_fold, "FULL", out_fold_name, "PR_bychrom.csv"),
         half_csv = pjoin(root_fold, "HALF", out_fold_name, "PR_bychrom.csv"),
     output:
-        full_png = pjoin(root_fold, "plots", "PR_plot.FULL.png"),
-        half_png = pjoin(root_fold, "plots", "PR_plot.HALF.png"),
+        full_pdf = pjoin(root_fold, "plots", "PR_plot.FULL.pdf"),
+        half_pdf = pjoin(root_fold, "plots", "PR_plot.HALF.pdf"),
     conda:
         "envs/malva_exps.yaml"
     shell:
         """
-        python3 {WF}/analysis/plots/plot_PR.py {input.full_csv} {output.full_png}
-        python3 {WF}/analysis/plots/plot_PR.py {input.half_csv} {output.half_png}
+        python3 {WF}/analysis/plots/plot_PR.py {input.full_csv} {output.full_pdf}
+        python3 {WF}/analysis/plots/plot_PR.py {input.half_csv} {output.half_pdf}
         """
 
 rule plot_indels:
@@ -951,7 +919,7 @@ rule plot_indels:
         expand(pjoin(root_fold, "FULL", out_fold_name, "indels", "{tool}.indels.csv"),
                tool = ["malva", "gatk", "bcftools", "discosnp"])
     output:
-        pjoin(root_fold, "plots", "indels_plot.png"),
+        pjoin(root_fold, "plots", "indels_plot.pdf"),
     conda:
         "envs/malva_exps.yaml"
     shell:
@@ -963,7 +931,7 @@ rule plot_resources:
         pjoin(WF, "nonsnake_scripts", "resources_plot", "full.csv"),
         pjoin(WF, "nonsnake_scripts", "resources_plot", "half.csv")
     output:
-        pjoin(root_fold, "plots", "resources_plot.png")
+        pjoin(root_fold, "plots", "resources_plot.pdf")
     conda:
         "envs/malva_exps.yaml"
     shell:
@@ -971,32 +939,12 @@ rule plot_resources:
         python3 {WF}/nonsnake_scripts/resources_plot/plot_resources.py {input} {output}
         """
 
-# rule plot_heatmaps:
-#     input:
-#         malva_cf = pjoin(root_fold, "HALF", out_fold_name, "snps", "vargeno.confmatrix.csv"),
-#         vargeno_cf = pjoin(root_fold, "HALF", out_fold_name, "snps", "malva.confmatrix.csv")
-#     output:
-#         pjoin(root_fold, "plots", "malva.heatmap.png"),
-#         pjoin(root_fold, "plots", "malva.table.png"),
-#         pjoin(root_fold, "plots", "vargeno.heatmap.png"),
-#         pjoin(root_fold, "plots", "vargeno.table.png")
-#     params:
-#         malva = pjoin(root_fold, "plots", "malva"),
-#         vargeno = pjoin(root_fold, "plots", "vargeno")
-#     conda:
-#         "envs/malva_exps.yaml"
-#     shell:
-#         """
-#         python3 {WF}/analysis/plots/plot_heatmap.py {input.malva_cf} {params.malva}
-#         python3 {WF}/analysis/plots/plot_heatmap.py {input.vargeno_cf} {params.vargeno}
-#         """
-
 rule plot_heatmaps:
     input:
         pjoin(root_fold, "HALF", out_fold_name, "snps", "{tool}.confmatrix.csv")
     output:
-        pjoin(root_fold, "plots", "{tool}.heatmap.png"),
-        pjoin(root_fold, "plots", "{tool}.table.png")
+        pjoin(root_fold, "plots", "{tool}.heatmap.pdf"),
+        pjoin(root_fold, "plots", "{tool}.table.pdf")
     params:
         pjoin(root_fold, "plots", "{tool}"),
     conda:

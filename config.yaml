@@ -1,4 +1,4 @@
-root: /home/luca/data/malva_recomb
+root: /set/me
 folds:
   in : input
   mid : mid
@@ -6,9 +6,8 @@ folds:
 files:
   ref : hs37d5.fa
   cleanref : hs37d5.clean.fa
-  vcf : 1kgen.ph3.EUR.vcf
-  vcf_vg : 1kgen.ph3.EUR.vargeno.vcf
-  malva_vg : 1kgen.ph3.EUR.malva.vcf
+  vcf : 1kgen.vcf
+  vcf_vg : 1kgen.vargeno.vcf
   sample : RMNISTHS_30xdownsample
 params:
   truth : NA12878

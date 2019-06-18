@@ -6,6 +6,10 @@ analysis, we used the Snakemake workflow manager.  Moreover, to
 simplify the installation of all the required tools, we used conda (we
 provide the conda environments).
 
+## Note
+The scripts work only with MALVA>=1.0.2 (currently, the version of the
+bioconda package is 1.0.1). I'll update MALVA code and package asap.
+
 ### Prerequisites
 
 - we assume `snakemake` and `conda` to be installed and in your `PATH`
