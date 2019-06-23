@@ -6,6 +6,11 @@ analysis, we used the Snakemake workflow manager.  Moreover, to
 simplify the installation of all the required tools, we used conda (we
 provide the conda environments).
 
+To clone the repository:
+```
+git clone --recursive https://github.com/AlgoLab/malva_experiments.git
+```
+
 ## Note
 The scripts work only with MALVA>=1.0.2 (currently, the version of the
 bioconda package is 1.0.1). I'll update MALVA code and package asap.
@@ -14,12 +19,10 @@ bioconda package is 1.0.1). I'll update MALVA code and package asap.
 
 - we assume `snakemake` and `conda` to be installed and in your `PATH`
 
-- we used a modified version of `vargeno`, so you have to download and
+- we used a modified version of `vargeno` (provided as submodule), to
   compile it:
 ```
-git clone https://github.com/AlgoLab/malva_experiments.git
-cd malva_experiments
-git clone https://github.com/ldenti/vargeno.git
+cd [malva_experiments_repo]/vargeno
 git checkout fix_fasta_header
 bash install.sh
 ```
@@ -33,8 +36,8 @@ bash install.sh
 Change the `root` folder in the `config.yaml` file with the desired
 folder and run:
 ```
-snakemake [-n]
+snakemake [-n] --use-conda [-j 4]
 ```
 
-If you have any problem running the experiments, please contact Luca
-Denti.
+If you have any problem running the experiments, please contact [Luca
+Denti](https://github.com/ldenti).

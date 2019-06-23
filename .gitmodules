@@ -1,0 +1,3 @@
+[submodule "vargeno"]
+	path = vargeno
+	url = https://github.com/ldenti/vargeno.git
