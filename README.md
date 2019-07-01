@@ -11,10 +11,6 @@ To clone the repository:
 git clone --recursive https://github.com/AlgoLab/malva_experiments.git
 ```
 
-## Note
-The scripts work only with MALVA>=1.0.2 (currently, the version of the
-bioconda package is 1.0.1). I'll update MALVA code and package asap.
-
 ### Prerequisites
 
 - we assume `snakemake` and `conda` to be installed and in your `PATH`
